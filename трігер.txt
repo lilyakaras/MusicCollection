@@ -1,0 +1,45 @@
+create or alter trigger trNewQuantityDisks
+on Sellings
+for insert,update
+as
+if ((select Quantity from inserted)<= (select Quantity from Disks where IdDisk=(select IdDisk from inserted)))
+begin
+update Disks
+set Quantity=Quantity-(select Quantity from inserted) where IdDisk=(select IdDisk from inserted)
+end
+else
+begin
+raiserror('Not enough disks',0,1)
+rollback transaction
+end
+
+select * from Sellings
+
+select * from Disks
+
+create or alter function fnGetSum(@idUser int)
+returns int
+as
+begin
+declare @sum int
+set @sum=(select Sum(Quantity*Price) from Sellings 
+where Sellings.IdUser=@idUser)
+return @sum
+end
+
+create or alter function fnGetSale(@idDisk int)
+returns int
+as
+begin
+declare @sale int
+set @sale=(select [Percent] from Discounts 
+where Discounts.IdDisk=@idDisk and DtStart<=GETDATE() and DtEnd>=GETDATE())
+return @sale
+end
+
+create or alter function fnGetLatestNewDisk()
+returns table
+as
+return(
+select * from Disks 
+where MONTH(DtPublish)= MONTH(GETDATE()))
